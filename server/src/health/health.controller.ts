@@ -1,21 +1,22 @@
 import { Controller, Get, Res } from '@nestjs/common';
-import { Public } from '../common/decorators/public.decorator';
 import { InjectConnection } from '@nestjs/mongoose';
-import { Connection, ConnectionStates } from 'mongoose';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiServiceUnavailableResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
+import { Connection, ConnectionStates } from 'mongoose';
+import { Public } from '../common/decorators/public.decorator';
+import { HealthResponseDto } from './dto/health-response.dto';
 
 /** Longest we will wait for the database to answer before calling it down. */
 const PING_TIMEOUT_MS = 2000;
 
-interface HealthResponse {
-  status: 'ok' | 'error';
-  db: 'up' | 'down';
-  uptime: number;
-  timestamp: string;
-}
-
 // The global JwtAuthGuard covers every route, so the probe must opt out
 // explicitly — an orchestrator has no bearer token.
+@ApiTags('health')
 @Public()
 @Controller('health')
 export class HealthController {
@@ -28,10 +29,27 @@ export class HealthController {
    * unreachable is worse than no probe at all, because it keeps traffic routed
    * at a broken instance.
    */
+  @ApiOperation({
+    summary: 'Readiness probe',
+    description:
+      'Unauthenticated, and served outside the /api prefix. Runs a real ping ' +
+      'against MongoDB rather than returning a static 200, because a probe ' +
+      'that reports healthy while the database is unreachable keeps traffic ' +
+      'routed at a broken instance.',
+  })
+  @ApiOkResponse({
+    description: 'Database reachable.',
+    type: HealthResponseDto,
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'Database unreachable; body carries status "error", db "down".',
+    type: HealthResponseDto,
+  })
   @Get()
   async check(
     @Res({ passthrough: true }) res: Response,
-  ): Promise<HealthResponse> {
+  ): Promise<HealthResponseDto> {
     const healthy = await this.pingDatabase();
 
     // Status is set explicitly rather than by throwing an HttpException so the

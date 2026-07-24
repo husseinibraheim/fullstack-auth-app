@@ -1,6 +1,7 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -51,6 +52,36 @@ async function bootstrap(): Promise<void> {
   );
 
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Mounted at /docs, outside the /api prefix, alongside /health.
+  const openApiConfig = new DocumentBuilder()
+    .setTitle('Authentication API')
+    .setDescription(
+      'Sign-up, sign-in and session for the fullstack-auth-app.\n\n' +
+        'Authentication is a stateless HS256 JWT sent as ' +
+        '`Authorization: Bearer <token>`, valid for one hour. There is no ' +
+        'logout endpoint: nothing is stored server-side, so a token cannot be ' +
+        'revoked and stays valid until it expires. Logging out is a ' +
+        'client-side act — discard the token. Expiry is the only bound on ' +
+        'that window.\n\n' +
+        'Every failure returns the same envelope; `errors` appears only on ' +
+        '400 responses.',
+    )
+    .setVersion('1.0')
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      description: 'Paste the accessToken returned by signup or signin.',
+    })
+    .build();
+
+  SwaggerModule.setup(
+    'docs',
+    app,
+    SwaggerModule.createDocument(app, openApiConfig),
+    { swaggerOptions: { persistAuthorization: true } },
+  );
 
   const port = config.get('PORT', { infer: true });
   await app.listen(port);

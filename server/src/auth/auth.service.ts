@@ -4,22 +4,8 @@ import { UsersService } from '../users/users.service';
 import type { UserDocument } from '../users/schemas/user.schema';
 import { SignUpDto } from './dto/sign-up.dto';
 import { SignInDto } from './dto/sign-in.dto';
+import { AuthResponseDto, ProfileResponseDto } from './dto/auth-response.dto';
 import type { JwtPayload } from './types/jwt-payload.type';
-
-export interface PublicUser {
-  id: string;
-  email: string;
-  name: string;
-}
-
-export interface AuthResponse {
-  accessToken: string;
-  user: PublicUser;
-}
-
-export interface ProfileResponse extends PublicUser {
-  createdAt: Date;
-}
 
 /**
  * Owns tokens and session. It never touches bcrypt or the User model directly:
@@ -38,7 +24,7 @@ export class AuthService {
    * signed in rather than being bounced to the login form. A duplicate email
    * surfaces as the ConflictException UsersService raises (409).
    */
-  async signUp(dto: SignUpDto): Promise<AuthResponse> {
+  async signUp(dto: SignUpDto): Promise<AuthResponseDto> {
     const user = await this.users.create({
       email: dto.email,
       name: dto.name,
@@ -48,7 +34,7 @@ export class AuthService {
     return this.issueToken(user);
   }
 
-  async signIn(dto: SignInDto): Promise<AuthResponse> {
+  async signIn(dto: SignInDto): Promise<AuthResponseDto> {
     const user = await this.users.verifyCredentials(dto.email, dto.password);
 
     // One message for both unknown email and wrong password. Distinguishing
@@ -69,7 +55,7 @@ export class AuthService {
    * point at which a deleted account is detected, since the strategy does no
    * lookup of its own.
    */
-  async getProfile(userId: string): Promise<ProfileResponse> {
+  async getProfile(userId: string): Promise<ProfileResponseDto> {
     const user = await this.users.findById(userId);
 
     if (!user) {
@@ -84,7 +70,7 @@ export class AuthService {
     };
   }
 
-  private async issueToken(user: UserDocument): Promise<AuthResponse> {
+  private async issueToken(user: UserDocument): Promise<AuthResponseDto> {
     const id = String(user._id);
     const payload: JwtPayload = { sub: id, email: user.email };
 
