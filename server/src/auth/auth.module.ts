@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import type { AppConfig } from '../config/env.config';
@@ -30,11 +29,10 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    JwtStrategy,
-    // Global guard: every route is protected unless it carries @Public().
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
-  ],
+  // JwtAuthGuard is registered as a global APP_GUARD in AppModule, alongside
+  // the throttler, so their execution order is explicit. It is exported here
+  // for completeness.
+  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+  exports: [JwtAuthGuard],
 })
 export class AuthModule {}
