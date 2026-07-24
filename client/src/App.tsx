@@ -1,19 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute';
-
-// Placeholders. Real pages land next milestone; these exist so the routing and
-// the guard can be exercised now.
-function SignUpPage() {
-  return <h1>Sign up</h1>;
-}
-
-function SignInPage() {
-  return <h1>Sign in</h1>;
-}
-
-function AppPage() {
-  return <h1>Welcome to the application.</h1>;
-}
+import { AppPage } from './pages/AppPage';
+import { SignInPage } from './pages/SignInPage';
+import { SignUpPage } from './pages/SignUpPage';
 
 /**
  * Four routes, declared inline. A route-config module plus a renderer would be

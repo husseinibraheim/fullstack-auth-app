@@ -9,7 +9,7 @@ import * as authApi from '../api/auth.api';
 import { registerUnauthorizedHandler } from '../api/client';
 import type { AuthStatus, User } from '../types/auth';
 import { AuthContext, type AuthContextValue } from './auth-context';
-import { clearToken, getToken, setToken } from './token-storage';
+import { TOKEN_KEY, clearToken, getToken, setToken } from './token-storage';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   // Three-valued, not a boolean. On a refresh the app holds a token but does
@@ -33,6 +33,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Let the axios 401 interceptor end the session through React rather than
   // through window.location.
   useEffect(() => registerUnauthorizedHandler(logout), [logout]);
+
+  // Keep tabs in step. `storage` fires only in *other* tabs, so logging out in
+  // one clears the rest instead of leaving them rendering /app against a token
+  // that is gone. A null key means the whole store was cleared.
+  useEffect(() => {
+    function onStorage(event: StorageEvent) {
+      if (event.key !== null && event.key !== TOKEN_KEY) return;
+      if (getToken() === null) {
+        setUser(null);
+        setStatus('anonymous');
+      }
+    }
+
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   useEffect(() => {
     const token = getToken();
