@@ -1,4 +1,5 @@
 import { Controller, Get, Res } from '@nestjs/common';
+import { Public } from '../common/decorators/public.decorator';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, ConnectionStates } from 'mongoose';
 import type { Response } from 'express';
@@ -13,6 +14,9 @@ interface HealthResponse {
   timestamp: string;
 }
 
+// The global JwtAuthGuard covers every route, so the probe must opt out
+// explicitly — an orchestrator has no bearer token.
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(@InjectConnection() private readonly connection: Connection) {}

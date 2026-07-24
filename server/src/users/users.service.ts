@@ -2,7 +2,7 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
-import { Model } from 'mongoose';
+import { isValidObjectId, Model } from 'mongoose';
 import type { AppConfig } from '../config/env.config';
 import { CreateUserDto } from './dto/create-user.dto';
 import { normalizeEmail } from './normalize-email';
@@ -56,6 +56,18 @@ export class UsersService {
   /** Safe lookup: the returned document never carries passwordHash. */
   async findByEmail(email: string): Promise<UserDocument | null> {
     return this.userModel.findOne({ email: normalizeEmail(email) }).exec();
+  }
+
+  /**
+   * Safe lookup by id, used by GET /auth/me to resolve a token's `sub` claim.
+   * A malformed id returns null rather than throwing Mongoose's CastError, so
+   * a junk token cannot produce a 500.
+   */
+  async findById(id: string): Promise<UserDocument | null> {
+    if (!isValidObjectId(id)) {
+      return null;
+    }
+    return this.userModel.findById(id).exec();
   }
 
   /**
