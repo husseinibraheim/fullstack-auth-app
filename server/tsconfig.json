@@ -17,6 +17,10 @@
     "incremental": true,
     "skipLibCheck": true,
     "strict": true,
+    // Off because Mongoose and class-transformer populate schema/DTO fields at
+    // runtime, so those properties are never initialised in code the compiler
+    // sees. Disabling this lets them be declared without a `!` assertion.
+    "strictPropertyInitialization": false,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true
   }

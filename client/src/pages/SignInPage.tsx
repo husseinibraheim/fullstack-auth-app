@@ -18,11 +18,7 @@ const signInSchema = z.object({
 
 type SignInValues = z.infer<typeof signInSchema>;
 
-/**
- * One message regardless of whether the email is unknown or the password is
- * wrong — the same stance the API takes, so the UI cannot be used to work out
- * which addresses are registered.
- */
+
 const INVALID_CREDENTIALS = 'Invalid email or password';
 
 export function SignInPage() {

@@ -1,18 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-/**
- * The shape every failure returns, produced by AllExceptionsFilter.
- * Documented once and referenced by every error response across the API.
- */
 export class ErrorResponseDto {
   @ApiProperty({ example: 400 })
-  statusCode!: number;
+  statusCode: number;
 
   @ApiProperty({
     description: 'Human-readable summary. Always a single string.',
     example: 'Validation failed',
   })
-  message!: string;
+  message: string;
 
   @ApiPropertyOptional({
     description:
@@ -34,11 +30,11 @@ export class ErrorResponseDto {
       'when reporting a 500, whose body is deliberately generic.',
     example: 'e88edb65-1be5-4257-9f76-388ddbb42d7c',
   })
-  requestId!: string;
+  requestId: string;
 
   @ApiProperty({ example: '2026-07-24T15:56:49.506Z' })
-  timestamp!: string;
+  timestamp: string;
 
   @ApiProperty({ example: '/api/auth/signup' })
-  path!: string;
+  path: string;
 }

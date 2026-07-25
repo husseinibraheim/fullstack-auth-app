@@ -39,10 +39,6 @@ function isFieldErrors(value: unknown): value is FieldErrors {
   );
 }
 
-/**
- * The single owner of the error contract. Every failure on every route leaves
- * through here in one shape, so the frontend needs exactly one parser.
- */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -71,7 +67,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
             ? payload.message
             : exception.message;
 
-        // Only 400s carry a field map — the shape the client maps onto inputs.
         if (
           status === HttpStatus.BAD_REQUEST &&
           isFieldErrors(payload.errors)
@@ -80,22 +75,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
         }
       }
 
-      // The throttler's own message ("ThrottlerException: Too Many Requests")
-      // is an implementation detail leaking into the contract.
       if (status === HttpStatus.TOO_MANY_REQUESTS) {
         message = 'Too many requests, please try again later';
       }
     } else if (isDuplicateKeyError(exception)) {
-      // UsersService already maps E11000 on the signup path. This is the
-      // backstop for any future unique index whose violation nobody caught:
-      // without it a duplicate surfaces as a 500 full of driver internals.
       status = HttpStatus.CONFLICT;
       message = 'A record with that value already exists';
     }
 
-    // Anything unexpected is logged in full and answered generically. The
-    // requestId is the only thread between the opaque client response and the
-    // real cause in the logs.
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
         `${request.method} ${request.url} -> ${status} [${requestId}]`,

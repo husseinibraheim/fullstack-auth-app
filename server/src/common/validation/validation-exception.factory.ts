@@ -3,15 +3,6 @@ import type { ValidationError } from 'class-validator';
 
 export type FieldErrors = Record<string, string[]>;
 
-/**
- * Collapses class-validator's tree into `field -> messages`.
- *
- * The array per field is deliberate and must not be flattened: a password can
- * fail several rules at once, and the client renders every unmet requirement
- * together rather than revealing them one rejection at a time. Nest's default
- * factory produces a flat string[] across all fields, which loses the
- * association between a message and the input it belongs to.
- */
 function collect(
   errors: ValidationError[],
   parentPath = '',
@@ -35,10 +26,6 @@ function collect(
   return acc;
 }
 
-/**
- * Wired into the global ValidationPipe. Everything downstream (the exception
- * filter, and the frontend) depends on this shape.
- */
 export function validationExceptionFactory(
   errors: ValidationError[],
 ): BadRequestException {

@@ -6,13 +6,7 @@ export function AppPage() {
   const navigate = useNavigate();
 
   function handleLogout() {
-    // Clears the token and resets context to 'anonymous'. No network call:
-    // there is no logout endpoint, because nothing is stored server-side and
-    // the token stays valid until it expires.
     logout();
-    // `replace` so the app page is not one back-press away. ProtectedRoute
-    // would also redirect on the state change; navigating explicitly makes the
-    // intent obvious at the call site rather than implicit in the guard.
     navigate('/signin', { replace: true });
   }
 
@@ -21,8 +15,6 @@ export function AppPage() {
       <div className="card">
         <h1>Welcome to the application.</h1>
 
-        {/* The name comes from /auth/me via context, so this line is proof the
-            protected endpoint works — not just a static string. */}
         {user && (
           <p className="greeting">
             Signed in as <strong>{user.name}</strong> ({user.email})

@@ -8,7 +8,6 @@ import './index.css';
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      {/* Inside the router so route guards can read auth state. */}
       <AuthProvider>
         <App />
       </AuthProvider>

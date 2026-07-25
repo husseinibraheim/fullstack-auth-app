@@ -14,8 +14,7 @@ import {
   SPECIAL_PATTERN,
 } from '../validation/password.rules';
 
-// Mirrors SignUpDto on the server. `.trim()` precedes `.min(3)` so whitespace
-// cannot pad a name to length — the same ordering the server's @Transform gives.
+
 const signUpSchema = z.object({
   email: z.email('Enter a valid email address').max(254),
   name: z
@@ -46,9 +45,7 @@ export function SignUpPage() {
     formState: { errors, isSubmitting },
   } = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
-    // Validate on first blur, then live. The default (submit-only) gives no
-    // feedback until the user commits; validating on every keystroke from the
-    // first character scolds them mid-word.
+
     mode: 'onTouched',
     defaultValues: { email: '', name: '', password: '' },
   });
@@ -57,16 +54,12 @@ export function SignUpPage() {
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      // AuthProvider persists the token, then sets context state; navigation
-      // happens only after both, so the route guard cannot evaluate against an
-      // empty store and bounce us straight back here.
+
       await signUp(values.email, values.name, values.password);
       navigate('/app', { replace: true });
     } catch (caught) {
       const error = caught as ApiError;
 
-      // 400 -> per-field. Anything else (409 duplicate email, 429, network) is
-      // form-level: there is no input to attach it to.
       const mapped = applyServerErrors(error, setError);
       if (!mapped) {
         setError('root', { type: 'server', message: error.message });

@@ -14,12 +14,6 @@ import {
 } from '../../common/validation/password.rules';
 import { normalizeEmail } from '../../users/normalize-email';
 
-/**
- * HTTP contract for POST /auth/signup — the full signup policy.
- *
- * Deliberately NOT shared with SignInDto: complexity rules must never apply to
- * a login body. See sign-in.dto.ts.
- */
 export class SignUpDto {
   @ApiProperty({
     example: 'alice@example.com',
@@ -32,7 +26,7 @@ export class SignUpDto {
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? normalizeEmail(value) : value,
   )
-  email!: string;
+  email: string;
 
   @ApiProperty({
     example: 'Alice',
@@ -41,16 +35,13 @@ export class SignUpDto {
     description:
       'Trimmed before validation, so whitespace cannot pad it to length.',
   })
-  // Trim runs before length validation (ValidationPipe transforms first), so
-  // "  ab  " correctly fails the 3-character minimum rather than passing on
-  // whitespace.
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )
   @IsString()
   @MinLength(3, { message: 'name must be at least 3 characters' })
   @MaxLength(50)
-  name!: string;
+  name: string;
 
   @ApiProperty({
     example: 'Sup3r$ecret',
@@ -63,8 +54,6 @@ export class SignUpDto {
       'rejection lists every unmet requirement at once. The upper bound is ' +
       "bcrypt's 72-byte truncation point.",
   })
-  // Each rule is asserted separately so the response can name every unmet
-  // requirement at once, instead of revealing them one rejection at a time.
   @IsString()
   @MinLength(PASSWORD_MIN_LENGTH, {
     message: `password must be at least ${PASSWORD_MIN_LENGTH} characters`,
@@ -81,5 +70,5 @@ export class SignUpDto {
   @Matches(PASSWORD_RULES.special.pattern, {
     message: PASSWORD_RULES.special.message,
   })
-  password!: string;
+  password: string;
 }
