@@ -1,14 +1,5 @@
 import { z } from 'zod';
 
-/**
- * Environment contract for the API.
- *
- * Anything required here has no fallback: if it is missing or malformed the
- * process refuses to start. That is deliberate for JWT_SECRET in particular —
- * a default such as `process.env.JWT_SECRET ?? 'dev-secret'` looks defensive
- * but is a complete authentication bypass, since every deployment that forgets
- * the variable signs tokens anyone can forge.
- */
 export const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
@@ -26,7 +17,25 @@ export const envSchema = z.object({
       'must be at least 32 characters — generate with `openssl rand -base64 48`',
     ),
 
-  JWT_EXPIRES_IN: z.string().min(1).default('1h'),
+  // Sliding window: token lifetime, and the idle timeout after which an
+  // inactive session dies. Renewed while active (see SESSION_RENEW_WITHIN).
+  JWT_EXPIRES_IN: z
+    .string()
+    .regex(/^\d+[smhd]$/, 'must be a duration like 1h')
+    .default('1h'),
+
+  // Hard ceiling: a session cannot slide past this after its original login,
+  // however active. Bounds the window a stolen-but-active token stays valid.
+  SESSION_ABSOLUTE_MAX: z
+    .string()
+    .regex(/^\d+[smhd]$/, 'must be a duration like 8h')
+    .default('8h'),
+
+  // Renew the token when a request arrives with less than this much life left.
+  SESSION_RENEW_WITHIN: z
+    .string()
+    .regex(/^\d+[smhd]$/, 'must be a duration like 10m')
+    .default('10m'),
 
   // Exact frontend origin. Never "*" — see CORS setup in main.ts.
   CORS_ORIGIN: z.url('must be a full origin, e.g. http://localhost:5173'),

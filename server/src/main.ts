@@ -25,6 +25,9 @@ async function bootstrap(): Promise<void> {
     // Every request carries a bearer token, so this header must be allowed
     // explicitly or the browser blocks the preflight.
     allowedHeaders: ['Content-Type', 'Authorization'],
+    // The sliding-session renewal header is custom, so the browser hides it
+    // from JS cross-origin unless we expose it explicitly.
+    exposedHeaders: ['X-Renewed-Token'],
     // No cookies are in play; bearer tokens make this unnecessary.
     credentials: false,
     // Every authenticated request preflights. Cache it.
@@ -59,11 +62,12 @@ async function bootstrap(): Promise<void> {
     .setDescription(
       'Sign-up, sign-in and session for the fullstack-auth-app.\n\n' +
         'Authentication is a stateless HS256 JWT sent as ' +
-        '`Authorization: Bearer <token>`, valid for one hour. There is no ' +
-        'logout endpoint: nothing is stored server-side, so a token cannot be ' +
-        'revoked and stays valid until it expires. Logging out is a ' +
-        'client-side act — discard the token. Expiry is the only bound on ' +
-        'that window.\n\n' +
+        '`Authorization: Bearer <token>`. The session slides: a near-expiry ' +
+        'token is re-issued on an active request and returned in the ' +
+        '`X-Renewed-Token` response header, so an active user is not logged ' +
+        'out — up to an absolute cap measured from the original login. ' +
+        'Nothing is stored server-side, so a token still cannot be revoked; ' +
+        'logout is a client-side act (discard the token).\n\n' +
         'Every failure returns the same envelope; `errors` appears only on ' +
         '400 responses.',
     )

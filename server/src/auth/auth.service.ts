@@ -4,14 +4,11 @@ import { UsersService } from '../users/users.service';
 import type { UserDocument } from '../users/schemas/user.schema';
 import { SignUpDto } from './dto/sign-up.dto';
 import { SignInDto } from './dto/sign-in.dto';
-import { AuthResponseDto, ProfileResponseDto } from './dto/auth-response.dto';
-import type { JwtPayload } from './types/jwt-payload.type';
+import { AuthResponseDto } from './dto/auth-response.dto';
+import type { JwtPayload } from '../common/types/jwt-payload.type';
 
-/**
- * Owns tokens and session. It never touches bcrypt or the User model directly:
- * hashing and credential comparison belong to UsersService, keeping the
- * dependency one-directional (AuthModule -> UsersModule).
- */
+// Owns tokens and session. Never touches bcrypt or the User model directly —
+// hashing and credential comparison belong to UsersService.
 @Injectable()
 export class AuthService {
   constructor(
@@ -19,11 +16,6 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  /**
-   * Creates the account and returns a token immediately, so the client lands
-   * signed in rather than being bounced to the login form. A duplicate email
-   * surfaces as the ConflictException UsersService raises (409).
-   */
   async signUp(dto: SignUpDto): Promise<AuthResponseDto> {
     const user = await this.users.create({
       email: dto.email,
@@ -37,9 +29,6 @@ export class AuthService {
   async signIn(dto: SignInDto): Promise<AuthResponseDto> {
     const user = await this.users.verifyCredentials(dto.email, dto.password);
 
-    // One message for both unknown email and wrong password. Distinguishing
-    // them (or returning 404 for an unknown address) would turn this endpoint
-    // into a user-enumeration oracle.
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -47,34 +36,15 @@ export class AuthService {
     return this.issueToken(user);
   }
 
-  /**
-   * The module's one per-request database read, behind the JWT guard.
-   *
-   * Answers 401 — not 404 — when the record is gone. The resource is not
-   * "missing"; the credential presented is no longer valid. This is the only
-   * point at which a deleted account is detected, since the strategy does no
-   * lookup of its own.
-   */
-  async getProfile(userId: string): Promise<ProfileResponseDto> {
-    const user = await this.users.findById(userId);
-
-    if (!user) {
-      throw new UnauthorizedException('Invalid or expired session');
-    }
-
-    return {
-      id: String(user._id),
-      email: user.email,
-      name: user.name,
-      createdAt: user.createdAt,
-    };
-  }
-
   private async issueToken(user: UserDocument): Promise<AuthResponseDto> {
     const id = String(user._id);
-    const payload: JwtPayload = { sub: id, email: user.email };
+    // sessionStart anchors the absolute cap; a fresh login starts a new session.
+    const payload: JwtPayload = {
+      sub: id,
+      email: user.email,
+      sessionStart: Math.floor(Date.now() / 1000),
+    };
 
-    // Secret, algorithm (HS256) and lifetime come from JwtModule config.
     const accessToken = await this.jwt.signAsync(payload);
 
     return {

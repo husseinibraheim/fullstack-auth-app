@@ -1,5 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
-import { clearToken, getToken } from '../auth/token-storage';
+import { clearToken, getToken, setToken } from '../auth/token-storage';
 import type { ApiError } from '../types/auth';
 
 /**
@@ -74,7 +74,15 @@ function toApiError(error: AxiosError<Partial<ApiError>>): ApiError {
 }
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Sliding session: the server re-issues a near-expiry token in this header.
+    // Swap it into storage so subsequent requests carry the extended token.
+    const renewed = response.headers['x-renewed-token'];
+    if (typeof renewed === 'string' && renewed) {
+      setToken(renewed);
+    }
+    return response;
+  },
   (error: AxiosError<Partial<ApiError>>) => {
     const status = error.response?.status;
     const url = error.config?.url ?? '';

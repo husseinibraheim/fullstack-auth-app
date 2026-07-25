@@ -28,6 +28,6 @@ export async function signIn(payload: SignInPayload): Promise<AuthResponse> {
  * the user.
  */
 export async function getMe(): Promise<Profile> {
-  const { data } = await apiClient.get<Profile>('/auth/me');
+  const { data } = await apiClient.get<Profile>('/users/me');
   return data;
 }

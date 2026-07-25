@@ -1,14 +1,18 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
 import { isValidObjectId, Model } from 'mongoose';
 import type { AppConfig } from '../config/env.config';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ProfileResponseDto } from './dto/profile-response.dto';
 import { normalizeEmail } from './normalize-email';
 import { User, UserDocument } from './schemas/user.schema';
 
-/** Mongo's duplicate-key error code. */
 const DUPLICATE_KEY = 11000;
 
 function isDuplicateKeyError(err: unknown): boolean {
@@ -19,11 +23,8 @@ function isDuplicateKeyError(err: unknown): boolean {
   );
 }
 
-/**
- * Owns everything about the User: persistence, password hashing, and credential
- * verification. bcrypt lives here and nowhere else — AuthService asks this
- * service to verify a password rather than reaching for the hash itself.
- */
+// Owns persistence, password hashing, and credential verification. bcrypt lives
+// here and nowhere else.
 @Injectable()
 export class UsersService {
   constructor(
@@ -42,10 +43,8 @@ export class UsersService {
         passwordHash,
       });
     } catch (err) {
-      // The unique index enforces email uniqueness at the database, not in
-      // application code, so the check and the insert cannot race. Translate
-      // the raw driver error into a 409 here so it never reaches the client
-      // as a 500 full of driver internals.
+      // Uniqueness is enforced by the index, so translate E11000 into a 409
+      // rather than letting a driver 500 reach the client.
       if (isDuplicateKeyError(err)) {
         throw new ConflictException('Email is already registered');
       }
@@ -53,28 +52,32 @@ export class UsersService {
     }
   }
 
-  /** Safe lookup: the returned document never carries passwordHash. */
   async findByEmail(email: string): Promise<UserDocument | null> {
     return this.userModel.findOne({ email: normalizeEmail(email) }).exec();
   }
 
-  /**
-   * Safe lookup by id, used by GET /auth/me to resolve a token's `sub` claim.
-   * A malformed id returns null rather than throwing Mongoose's CastError, so
-   * a junk token cannot produce a 500.
-   */
   async findById(id: string): Promise<UserDocument | null> {
+    // Guard against a malformed `sub` so a junk token yields null, not a 500.
     if (!isValidObjectId(id)) {
       return null;
     }
     return this.userModel.findById(id).exec();
   }
 
-  /**
-   * The one finder that returns passwordHash, named so the danger is
-   * unmistakable. Use only for credential verification; never return the
-   * result to a client.
-   */
+  async getProfile(userId: string): Promise<ProfileResponseDto> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired session');
+    }
+
+    return {
+      id: String(user._id),
+      email: user.email,
+      name: user.name,
+      createdAt: user.createdAt,
+    };
+  }
+
   async findByEmailWithPassword(email: string): Promise<UserDocument | null> {
     return this.userModel
       .findOne({ email: normalizeEmail(email) })
@@ -82,11 +85,6 @@ export class UsersService {
       .exec();
   }
 
-  /**
-   * Verify an email/password pair. Returns the (hash-free) user on success and
-   * null on any failure — unknown email and wrong password are indistinguishable
-   * to the caller, so it cannot build a user-enumeration oracle.
-   */
   async verifyCredentials(
     email: string,
     password: string,
@@ -101,7 +99,6 @@ export class UsersService {
       return null;
     }
 
-    // Re-fetch without the hash so callers can never accidentally serialize it.
     return this.findByEmail(email);
   }
 }
