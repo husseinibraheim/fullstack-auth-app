@@ -49,3 +49,7 @@ mistakes below.
   by Mongoose and class-validator anyway.
 - A `@Transform` on the DTOs was returning an `any` the linter flagged, so I had
   to type it properly instead of leaving it loose.
+- I asked it to add sliding expiration so an active user's token extends
+  itself instead of logging them out. We went with a stateless version — the
+  server re-issues a near-expiry token in a response header and the client swaps
+  it in — with an 8-hour hard cap.
